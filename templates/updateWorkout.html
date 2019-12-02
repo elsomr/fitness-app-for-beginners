@@ -1,0 +1,60 @@
+<!doctype html>
+
+<html>
+<head>
+<link rel="stylesheet" href="styles.css">
+</head>
+<h1>Update Workout:</h1>
+<!-- Navigation Bar Implementation Based on: https://www.w3schools.com/css/css_navbar.asp -->
+ <div class="navBar">
+ <a href="index.html">Home</a>
+ <a href="/editWorkout">Update Workout</a>
+ <a href="/dailySummary">Daily Summary</a>
+ </div>
+	<form id="update-workout" class="updateWorkout" action="/editWorkout/{{ id }}" method="POST">
+
+		<fieldset>
+		<legend>	
+			<b>Update to Below</b>
+		</legend> 
+		<label for="updateWorkoutField"> 
+
+			<div class = "formDiv">
+			<table>
+				<thead>
+					<th>Exercise</th>
+					<th>Reps</th>
+					<th>Weight</th>
+				</thead>
+				<tbody>
+				{% for set in data %}
+					<tr>
+					<td>{{set['exercise']}} </td> 
+					<td>{{set['reps']}} </td>
+					<td>{{set['resistenceWeight']}}</td>
+					<input type="hidden" id="setID" name="setID" value={{ set['id'] }}>
+					<td> <input type="submit" value="Delete" > </td>
+
+				{% endfor %}
+				</tbody>
+			</table>
+		</label>              
+		</fieldset>
+	</form>
+	<<form id="update-workout" class="updateWorkout" action="/editWorkout/{{ id }}" method="POST">
+			
+    			<div class = "formDiv">
+               		Add New Set: <select name="exercise" id="exercise"> 
+                   	{% for exercise in exercises %}
+                    		<option value={{ exercise['name'] }}>{{ exercise['name']}}</option>
+                    {% endfor %}
+					</select>
+					Reps: <input type="number" name='reps'>
+					Weight: <input type="number" name="resistenceWeight">
+					<input type="submit" value="Submit" >
+				</div>
+		</label>              
+		</fieldset>
+	</form>
+	<br>		
+</html>

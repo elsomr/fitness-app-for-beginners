@@ -1,7 +1,8 @@
 import datetime
-from flask import Flask, request, make_response, render_template, redirect, jsonify
+from flask import Flask, request, make_response, render_template, redirect, jsonify, url_for, flash
 import constants
 import json
+import random
 from google.cloud import datastore
 from requests_oauthlib import OAuth2Session
 from google.oauth2 import id_token
@@ -19,6 +20,42 @@ app.config.from_object(__name__)
 #setting up datastore client
 client = datastore.Client()
 
+#gets all data for a workout
+def getData(id):
+
+	#fetch workout information
+	workout_key= client.key(constants.workouts, int(id))
+	workout = client.get(key=workout_key)
+	if workout == None:
+		errorMsg = {}
+		errorMsg["Error"]= "No workout with this workout_id exists"
+		return (json.dumps(errorMsg), 404)
+	else:
+		data = {}
+		data={'id': str(id)}
+
+		for prop in workout:
+			if prop != 'setList':
+				data[prop] = workout[prop]
+		data["self"]= constants.url + "/workouts/" + str(id)
+		
+	#get set list exercises and valies
+	setList = workout['setList'].split()
+	for setID in setList:
+		data['setList'] = {}
+		data['setList'][setID] = {}
+		#get exercise, rep, and weight
+		set_key= client.key(constants.sets, int(setID))
+		set = client.get(key=set_key)
+		# #get exercise name
+		# exercise_key=client.key(constants.exercises, int(set['exercise']))
+		# exercise = client.get(key=exercise_key)
+		# set['exercise'] = exercise['name']
+		
+		#format data to display
+		set_data = {'exercise': set['exercise'], 'rep': set['reps'], 'resistenceWeight': set['resistenceWeight']}
+		data['setList'][setID] = set_data
+	return data
 
 #used only for testing purposes!!!!! deletes entries in datastore
 # @app.route('/cleardatastore')
@@ -226,8 +263,8 @@ def users_get_post():
 			return (json.dumps(error), 400)
 		
 		#check the request content has all required properties
-		if len(content) !=3  or content["userName"] == None or content["password"] == None or \
-		content["email"]== None:
+		if len(content) !=4  or content["userName"] == None or content["password"] == None or \
+		content["email"]== None or content['workoutPlan'] == None:
 			#404 error json
 			errorMsg= {"Error": "The request object is missing at least one of the required attributes or has too many attributes"}
 			return (json.dumps(errorMsg), 400)
@@ -235,7 +272,7 @@ def users_get_post():
 		#store newly created user in datastore
 		newUser = datastore.entity.Entity(key=client.key(constants.users))
 		newUser.update({"userName": content["userName"], "password": content["password"],\
-		"email": content["email"] })
+		"email": content["email"], "workoutPlan": content["workoutPlan"] })
 		client.put(newUser)
 		
 		#format the return JSON message, adding the id and self attribute in the return message
@@ -264,39 +301,137 @@ def users_get_post():
 		
 		#returns JSON of all exercises 
 		return (json.dumps(user_arr), 200, {'Content-Type': 'application/json'})
-		
-		
-		
-#get or delete an individual exercise, just an example code to look at when needed. 
-#will need to use PATCH here to add the users workoutPlan later on. 	
-@app.route('/exercises/<id>', methods=['GET', 'DELETE'])
-def get_delete_exercise(id):
-	if request.method == "GET":
-		exercise_key= client.key(constants.exercises, int(id))
-		exercise = client.get(key=exercise_key)
 
-		if exercise == None:
-			errorMsg = {}
-			errorMsg["Error"]= "No exercise with this exercise_id exists"
-			return (json.dumps(errorMsg), 404)
-		else:
-			data = {}
-			data={'id': str(id)}
-			for prop in exercise:
-				data[prop] = exercise[prop]
-			data["self"]= constants.url + "/exercises/" + str(id)
-			return (json.dumps(data), 200)
+
+@app.route('/dailySummary', methods=['GET', 'POST'])
+def summary_wo_id():
+	#404 error json
+	errorMsg= {"Error": "The user id is missing, please add a valid id (5638186843766784) to the end of the url."}
+	return (json.dumps(errorMsg), 400)
+
+	
+@app.route('/dailySummary/<id>', methods=['GET'])
+def view_summary(id):
+	count = 0
+	user_key= client.key(constants.users, int(id))
+	user = client.get(key=user_key)
+
+	workoutList = user['workoutPlan']
+	workoutList = workoutList.split()
+	for w in workoutList:
+		w.replace(',', '')
+	
+	dailyWorkout = workoutList[0].replace(',', '')
+	workout_key= client.key(constants.workouts, int(dailyWorkout))
+	workout = client.get(key=workout_key)	
+	
+	setList = workout['setList'].split()
+	setArr = []
+	for setID in setList:
+		count += 1
+		setID = setID.replace(',', '')
+		data = {}
+		set_key= client.key(constants.sets, int(setID))
+		set = client.get(key=set_key)
+		
+		data['id'] = set.key.id
+		data['num'] = count
+		data['exercise'] = set['exercise']
+		for prop in set:
+			data[prop] = set[prop]
+		setArr.append(data)
+	
+	
+	
+	calorieCount = random.randint(0,50000)
+	stepCount = random.randint(0,40000)
+	
+	return render_template('dailySummary.html', workout = setArr, calorieCount = calorieCount, stepCount = stepCount)
+	
+
+@app.route('/editWorkout', methods=['GET', 'POST'])
+def edit_workout_wo_id():
+	#404 error json
+	errorMsg= {"Error": "The workout id is missing, please add 5633226290757632 to the end of the url."}
+	return (json.dumps(errorMsg), 400)
+	
+@app.route('/editWorkout/<id>', methods=['GET', 'POST'])
+def edit_workout(id):
+
+	if request.method == "POST":
+		try :
+			if request.form['setID']:
+				setID = request.form['setID']
+				workout_key= client.key(constants.workouts, int(id))
+				workout = client.get(key=workout_key)	
+				
+
+				setList = workout['setList'].split()
+				if str(setID) in setList:
+					setList.remove(str(setID))
+				
+				workout['setList'] = ' '.join(setList)
+				# workout['setList'].replace(setID, '')
+				client.put(workout)
+		except:
+				
+				#check the form content has all required properties
+				if request.form.get("exercise") == None or request.form["reps"] == None or \
+				request.form["resistenceWeight"]== None:
+					#404 error json
+					errorMsg= {"Error": "The request object is missing at least one of the required attributes or has too many attributes"}
+					return (json.dumps(errorMsg), 400)
 			
-	elif request.method == "DELETE":
-		exercise_key= client.key(constants.exercises, int(id))
-		exercise = client.get(key=exercise_key)
-		if exercise == None:
-			error = {}
-			error={"Error": "No exercise with this exercise_id exists"}
-			return (json.dumps(error), 404)
-			
-		exercise = client.delete(key=exercise_key)		
-		return ('', 204)
+				#store newly created wokrout in datastore
+				newSet= datastore.entity.Entity(key=client.key(constants.sets))
+				newSet.update({"exercise": request.form["exercise"], "reps": request.form["reps"],\
+				"resistenceWeight": request.form["resistenceWeight"] })
+				client.put(newSet)
+				
+				#format the return JSON message, adding the id and self attribute in the return message
+				result = {}
+				result={'id': str(newSet.key.id)}
+				for prop in newSet: 
+					result[prop] = newSet[prop]
+				result["self"] = str(constants.url + "/sets/" + str(newSet.key.id))
+				
+				newSetID = newSet.key.id
+				workout_key= client.key(constants.workouts, int(id))
+				workout = client.get(key=workout_key)
+				workout['setList'] += ' '
+				workout['setList'] += str(newSetID)
+				client.put(workout)
+
+
+
+
+	workout_key= client.key(constants.workouts, int(id))
+	workout = client.get(key=workout_key)	
+	
+	setList = workout['setList'].split()
+	setArr = []
+	for setID in setList:
+		setID = setID.replace(',', '')
+		data = {}
+		set_key= client.key(constants.sets, int(setID))
+		set = client.get(key=set_key)
+		
+		data['id'] = set.key.id
+		for prop in set:
+			data[prop] = set[prop]
+		setArr.append(data)
+	
+	
+	query = client.query(kind=constants.exercises)
+	results = list(query.fetch())
+	#render html using data
+	return render_template('updateWorkout.html', exercises=results, data=setArr, id=id)
+	
+	
+		
+
+
+
 
 if __name__ == '__main__':
 	app.run(host='127.0.0.1', port=8080, debug=True)

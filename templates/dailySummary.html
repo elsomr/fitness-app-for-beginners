@@ -1,0 +1,49 @@
+<!doctype html>
+
+<html>
+<head>
+<link rel="stylesheet" href="styles.css">
+</head>
+<h1>Daily Summary:</h1>
+<!-- Navigation Bar Implementation Based on: https://www.w3schools.com/css/css_navbar.asp -->
+ <div class="navBar">
+ <a href="http://fitness-app-for-beginners.appspot.com/">Home</a>
+ <a href="http://fitness-app-for-beginners.appspot.com/updateWorkout">Update Workout</a>
+ <a href="http://fitness-app-for-beginners.appspot.com/dailySummary">Daily Summary</a>
+ </div>
+
+	<table>
+		<thead>
+			<th>Set</th>
+			<th>Exercise</th>
+			<th>Reps</th>
+			<th>Weight</th>
+		</thead>
+		<tbody>
+		{% for exercise in workout %}
+			<tr>
+			<td>{{exercise['num'] }} </td>
+			<td>{{exercise['exercise']}} </td> 
+			<td>{{exercise['reps']}} </td>
+			<td>{{exercise['resistenceWeight']}}</td>
+
+		{% endfor %}
+		</tbody>
+	</table>
+	
+	<table>
+		<thead>
+			<th>Step Count</th>
+			<th>Calorie Count</th>
+		</thead>
+		<tbody>
+			<tr>
+			<td>{{stepCount }} </td>
+			<td>{{calorieCount}} </td> 
+
+
+		</tbody>
+	</table>
+	
+	
+</html>

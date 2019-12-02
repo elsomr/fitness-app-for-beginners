@@ -1,0 +1,50 @@
+<!doctype html>
+
+<html>
+
+<h1>Update Workout:</h1>
+<!-- Navigation Bar Implementation Based on: https://www.w3schools.com/css/css_navbar.asp -->
+ <div class="navBar">
+ <a href="index.html">Home</a>
+ <a href="http://fitness-app-for-beginners.appspot.com/editWorkout">Update Workout</a>
+ <a href="http://fitness-app-for-beginners.appspot.com/dailySummary">Daily Summary</a>
+ </div>
+ <br>
+	<form id="update-workout" class="updateWorkout" action="/editWorkout" method="post">
+
+		<fieldset>
+		<legend>	
+			<b>Update to Below</b>
+		</legend> 
+		<label for="updateWorkoutField"> 
+
+			<div class = "formDiv">
+			<table>
+				<thead>
+					<th>Exercise</th>
+					<th>Reps</th>
+					<th>Weight</th>
+				</thead>
+				<tbody>
+					{% for set in setList %}
+					<tr>
+						<td>{{set.exercise}} </td>
+						<td>{{set.reps}} </td>
+						<td>{{set.resistenceWeight}}</td>
+						<td> <button onclick="get_delete_exercise({{set.id}})" style = "margin-left: 45px">Delete</button> </td>
+					{% endfor %}
+				</tbody>
+			</table>
+			<br>
+			<br>
+               		Add Exercise: <select name="workout_add" id="setlist-selector"> 
+                   	{% for set in setList %}
+                    		<option value="{{set.id}}">{{set.exercise}}</option>
+					{% endfor %}
+                	</select>
+			</div>
+		</label>              
+		</fieldset>
+	</form>
+	<br>		
+</html>
